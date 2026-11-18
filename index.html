@@ -306,174 +306,198 @@
     </div>
   </main>
 
-  <script>
-    // Five shooting locations
-    // These are game probabilities, not real NBA stats.
+ 
+<script>
+  // CHANGE THIS TO YOUR ADAFRUIT USERNAME
+  const AIO_USERNAME = "eagle_henry";
+  const FEED_KEY = "knicks-game-events";
 
-    const spots = [
-      { name: "LEFT CORNER", x: 70, y: 290, chance: 35 },
-      { name: "LEFT WING", x: 170, y: 345, chance: 38 },
-      { name: "TOP OF THE KEY", x: 300, y: 370, chance: 40 },
-      { name: "RIGHT WING", x: 430, y: 345, chance: 38 },
-      { name: "RIGHT CORNER", x: 530, y: 290, chance: 35 }
-    ];
+  const spots = [
+    { name: "LEFT CORNER", x: 70, y: 290, chance: 35 },
+    { name: "LEFT WING", x: 170, y: 345, chance: 38 },
+    { name: "TOP OF THE KEY", x: 300, y: 370, chance: 40 },
+    { name: "RIGHT WING", x: 430, y: 345, chance: 38 },
+    { name: "RIGHT CORNER", x: 530, y: 290, chance: 35 }
+  ];
 
-    let currentSpot = 2;
-    let attempts = 0;
-    let makes = 0;
-    let points = 0;
-    let shotNumber = 0;
-    let history = [];
+  let lastFeedId = null;
+  let lastShotId = null;
+  let history = [];
 
-    function selectSpot(index) {
-      currentSpot = index;
+  function selectSpot(index) {
+    document.querySelectorAll(".spot").forEach(
+      el => el.classList.remove("selected")
+    );
 
-      document.querySelectorAll(".spot").forEach(
-        element => element.classList.remove("selected")
-      );
+    document.getElementById("spot" + index)
+      .classList.add("selected");
 
-      document.getElementById("spot" + index)
-        .classList.add("selected");
+    document.getElementById("spotName")
+      .textContent = spots[index].name;
 
-      const spot = spots[currentSpot];
+    document.getElementById("shotChance")
+      .textContent = spots[index].chance + "% SHOT CHANCE";
+  }
 
-      document.getElementById("spotName")
-        .textContent = spot.name;
+  // Prevent the webpage from controlling the game.
+  // The Arduino is now the controller.
+  function moveLeft() {}
+  function moveRight() {}
+  function shoot() {}
+  function resetGame() {}
 
-      document.getElementById("shotChance")
-        .textContent = spot.chance + "% SHOT CHANCE";
+  function addShotMarker(index, made) {
+    const spot = spots[index];
+    const ns = "http://www.w3.org/2000/svg";
+
+    const marker = document.createElementNS(ns, "circle");
+
+    marker.setAttribute("cx", spot.x);
+    marker.setAttribute("cy", spot.y);
+    marker.setAttribute("r", "9");
+    marker.setAttribute("fill", made ? "#22C55E" : "#EF4444");
+    marker.setAttribute("stroke", "white");
+    marker.setAttribute("stroke-width", "2");
+    marker.setAttribute("pointer-events", "none");
+
+    document.getElementById("shotMarkers")
+      .appendChild(marker);
+  }
+
+  function updateFromArduino(data) {
+    const parts = data.split(",");
+
+    if (parts.length !== 6) return;
+
+    const values = parts.map(Number);
+
+    if (values.some(value => !Number.isFinite(value))) {
+      return;
     }
 
-    function moveLeft() {
-      if (currentSpot > 0) {
-        selectSpot(currentSpot - 1);
-      }
+    const [
+      position,
+      attempts,
+      makes,
+      points,
+      shotId,
+      result
+    ] = values;
+
+    if (position < 0 || position > 4) return;
+
+    selectSpot(position);
+
+    document.getElementById("attempts")
+      .textContent = attempts;
+
+    document.getElementById("makes")
+      .textContent = makes;
+
+    document.getElementById("points")
+      .textContent = points;
+
+    document.getElementById("percentage")
+      .textContent = attempts === 0
+        ? "0%"
+        : Math.round(makes / attempts * 100) + "%";
+
+    // Show a marker only for a newly observed shot.
+    // If the Arduino restarts, clear the previous session.
+    if (lastShotId !== null && shotId < lastShotId) {
+      document.getElementById("shotMarkers").innerHTML = "";
+      history = [];
     }
 
-    function moveRight() {
-      if (currentSpot < spots.length - 1) {
-        selectSpot(currentSpot + 1);
-      }
-    }
+    if (lastShotId !== null &&
+        shotId > lastShotId &&
+        (result === 0 || result === 1)) {
 
-    function shoot() {
-      const spot = spots[currentSpot];
+      const made = result === 1;
 
-      // Probability-based shooting
-      const made = Math.random() * 100 < spot.chance;
-
-      attempts++;
-      shotNumber++;
-
-      if (made) {
-        makes++;
-        points += 3;
-      }
-
-      addShotMarker(spot.x, spot.y, made);
-
-      const result = made ? "MAKE!" : "MISS!";
+      addShotMarker(position, made);
 
       document.getElementById("message")
-        .textContent = result;
+        .textContent = made ? "BUCKET!" : "MISS!";
 
       document.getElementById("message")
         .style.color = made ? "#22C55E" : "#EF4444";
 
       history.unshift(
-        "#" + shotNumber + " - " + spot.name +
-        " - " + (made ? "MADE" : "MISSED")
+        "#" + shotId + " - " +
+        spots[position].name + " - " +
+        (made ? "MADE" : "MISSED")
       );
 
-      updateStats();
-      updateHistory();
-    }
-
-    function addShotMarker(x, y, made) {
-      const svgNS = "http://www.w3.org/2000/svg";
-
-      const marker = document.createElementNS(
-        svgNS, "circle"
-      );
-
-      // Offset markers slightly so multiple shots remain visible
-      const offsetX = (Math.random() - 0.5) * 30;
-      const offsetY = (Math.random() - 0.5) * 30;
-
-      marker.setAttribute("cx", x + offsetX);
-      marker.setAttribute("cy", y + offsetY);
-      marker.setAttribute("r", "7");
-      marker.setAttribute(
-        "fill", made ? "#22C55E" : "#EF4444"
-      );
-
-      marker.setAttribute("stroke", "white");
-      marker.setAttribute("stroke-width", "2");
-      marker.setAttribute("pointer-events", "none");
-
-      document.getElementById("shotMarkers")
-        .appendChild(marker);
-    }
-
-    function updateStats() {
-      const percentage = attempts === 0
-        ? 0
-        : Math.round((makes / attempts) * 100);
-
-      document.getElementById("attempts")
-        .textContent = attempts;
-
-      document.getElementById("makes")
-        .textContent = makes;
-
-      document.getElementById("percentage")
-        .textContent = percentage + "%";
-
-      document.getElementById("points")
-        .textContent = points;
-    }
-
-    function updateHistory() {
       document.getElementById("history")
-        .innerHTML = history.slice(0, 10)
-        .map(item => "<div>" + item + "</div>")
-        .join("");
+        .textContent = history.slice(0, 10).join(" | ");
     }
 
-    function resetGame() {
-      attempts = 0;
-      makes = 0;
-      points = 0;
-      shotNumber = 0;
-      history = [];
+    lastShotId = shotId;
+  }
 
-      document.getElementById("shotMarkers")
-        .innerHTML = "";
+  async function checkAdafruit() {
+    const url =
+      "https://io.adafruit.com/api/v2/" +
+      encodeURIComponent(AIO_USERNAME) +
+      "/feeds/" +
+      encodeURIComponent(FEED_KEY) +
+      "/data/last";
 
-      document.getElementById("message")
-        .textContent = "READY TO SHOOT?";
+    try {
+      const response = await fetch(url, {
+        cache: "no-store"
+      });
 
-      document.getElementById("message")
-        .style.color = "#F58426";
+      if (!response.ok) {
+        throw new Error("Adafruit HTTP " + response.status);
+      }
 
-      updateStats();
-      updateHistory();
-      selectSpot(2);
+      const data = await response.json();
+
+      if (data.id !== lastFeedId) {
+        lastFeedId = data.id;
+        updateFromArduino(String(data.value));
+      }
+
+      document.getElementById("connectionStatus")
+        .textContent = "ADA FRUIT IO: CONNECTED";
+
+    } catch (error) {
+      console.error(error);
+
+      document.getElementById("connectionStatus")
+        .textContent = "CONNECTION ERROR - CHECK FEED";
     }
+  }
 
-    // Keyboard controls matching the Modulino Buttons
-    document.addEventListener("keydown", function(event) {
-      if (event.repeat) return;
-
-      const key = event.key.toLowerCase();
-
-      if (key === "a") shoot();
-      if (key === "b") moveLeft();
-      if (key === "c") moveRight();
+  // Physical Arduino is the only controller.
+  document.querySelectorAll(".controls button, .reset")
+    .forEach(button => {
+      button.disabled = true;
+      button.style.opacity = "0.45";
+      button.style.cursor = "not-allowed";
     });
 
-    // Start at top of the key
-    selectSpot(2);
-  </script>
+  // Disable clicking the shooting spots.
+  document.querySelectorAll(".spot").forEach(el => {
+    el.removeAttribute("onclick");
+    el.style.cursor = "default";
+  });
+
+  const status = document.createElement("p");
+  status.id = "connectionStatus";
+  status.textContent = "CONNECTING TO ADAFRUIT IO...";
+  status.style.color = "#F58426";
+  status.style.fontWeight = "bold";
+
+  document.querySelector(".controls").after(status);
+
+  selectSpot(2);
+
+  // Check for new Arduino data every 5 seconds.
+  checkAdafruit();
+  setInterval(checkAdafruit, 5000);
+</script>
 </body>
 </html>
