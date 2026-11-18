@@ -495,9 +495,52 @@
 
   selectSpot(2);
 
+  
+async function testConnection() {
+  const testBox = document.createElement("div");
+  testBox.style.cssText =
+    "background:#203655;color:white;padding:15px;" +
+    "margin:20px auto;border:2px solid orange;" +
+    "border-radius:10px;max-width:600px;" +
+    "overflow-wrap:anywhere";
+
+  testBox.textContent = "Testing Adafruit IO...";
+  document.querySelector("main").appendChild(testBox);
+
+  const url =
+    "https://io.adafruit.com/api/v2/" +
+    encodeURIComponent(AIO_USERNAME) +
+    "/feeds/" +
+    encodeURIComponent(FEED_KEY) +
+    "/data/last";
+
+  try {
+    const response = await fetch(url, {
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      testBox.textContent =
+        "HTTP ERROR: " + response.status +
+        " | URL: " + url;
+      return;
+    }
+
+    const data = await response.json();
+
+    testBox.textContent =
+      "SUCCESS! Adafruit value: " + data.value;
+  } catch (error) {
+    testBox.textContent =
+      "CONNECTION FAILED: " + error.message +
+      " | URL: " + url;
+  }
+}
+testConnection();
+
   // Check for new Arduino data every 5 seconds.
-  checkAdafruit();
-  setInterval(checkAdafruit, 5000);
+ checkAdafruit();
+setInterval(checkAdafruit, 5000);
 </script>
 </body>
 </html>
