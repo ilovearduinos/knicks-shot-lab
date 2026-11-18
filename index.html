@@ -440,11 +440,20 @@
 
       addShotMarker(position, made);
 
-      document.getElementById("message")
-        .textContent = made ? "BUCKET!" : "MISS!";
+    
+const courtResult = document.getElementById("courtResult");
+const courtText = document.getElementById("courtResultText");
 
-      document.getElementById("message")
-        .style.color = made ? "#22C55E" : "#EF4444";
+courtText.textContent = made ? "BUCKET!" : "MISS!";
+courtText.setAttribute(
+  "fill",
+  made ? "#22C55E" : "#EF4444"
+);
+
+courtResult.style.display = "block";
+
+// Keep the result visible until the next shot
+
 
       history.unshift(
         "#" + shotId + " - " +
