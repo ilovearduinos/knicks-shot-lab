@@ -1,0 +1,479 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Knicks Shot Lab</title>
+  <style>
+    :root {
+      --blue: #006BB6;
+      --orange: #F58426;
+      --dark: #101D35;
+      --green: #22C55E;
+      --red: #EF4444;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--dark);
+      color: white;
+      text-align: center;
+    }
+
+    header {
+      padding: 22px 12px;
+      background: var(--blue);
+      border-bottom: 5px solid var(--orange);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 6vw, 46px);
+      letter-spacing: 2px;
+    }
+
+    header p {
+      margin: 8px 0 0;
+    }
+
+    main {
+      max-width: 900px;
+      margin: auto;
+      padding: 20px 12px 40px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .stat {
+      background: #203655;
+      padding: 15px 5px;
+      border-radius: 10px;
+    }
+
+    .stat h2 {
+      color: var(--orange);
+      margin: 0 0 5px;
+      font-size: 28px;
+    }
+
+    .stat p {
+      margin: 0;
+      font-size: 12px;
+    }
+
+    .court-container {
+      max-width: 650px;
+      margin: auto;
+      border: 5px solid var(--blue);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #C9935F;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .spot {
+      cursor: pointer;
+    }
+
+    .spot circle {
+      fill: var(--blue);
+      stroke: white;
+      stroke-width: 2;
+    }
+
+    .spot text {
+      fill: white;
+      font-size: 15px;
+      font-weight: bold;
+      text-anchor: middle;
+      pointer-events: none;
+    }
+
+    .spot.selected circle {
+      fill: var(--orange);
+      stroke: white;
+      stroke-width: 4;
+    }
+
+    .spot.selected {
+      filter: drop-shadow(0 0 7px #FFFFFF);
+    }
+
+    .controls {
+      margin: 22px auto;
+    }
+
+    button {
+      background: var(--blue);
+      color: white;
+      border: 2px solid white;
+      border-radius: 9px;
+      padding: 14px 20px;
+      margin: 5px;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: var(--orange);
+    }
+
+    .shoot {
+      background: var(--orange);
+      font-size: 20px;
+      min-width: 150px;
+    }
+
+    .reset {
+      background: #374151;
+      font-size: 13px;
+      padding: 10px 15px;
+    }
+
+    #message {
+      font-size: 24px;
+      font-weight: bold;
+      min-height: 35px;
+      color: var(--orange);
+    }
+
+    .info {
+      color: #C7D5E7;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .shot-history {
+      margin: 20px auto;
+      max-width: 600px;
+      background: #203655;
+      border-radius: 12px;
+      padding: 15px;
+    }
+
+    #history {
+      color: #DCE6F5;
+      line-height: 1.8;
+      font-size: 14px;
+    }
+
+    @media (max-width: 500px) {
+      .stats { gap: 5px; }
+      .stat h2 { font-size: 22px; }
+      button { padding: 12px 14px; }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>KNICKS SHOT LAB</h1>
+    <p>THE ULTIMATE SHOOTING CHALLENGE</p>
+  </header>
+
+  <main>
+    <div class="stats">
+      <div class="stat">
+        <h2 id="attempts">0</h2>
+        <p>ATTEMPTS</p>
+      </div>
+
+      <div class="stat">
+        <h2 id="makes">0</h2>
+        <p>MAKES</p>
+      </div>
+
+      <div class="stat">
+        <h2 id="percentage">0%</h2>
+        <p>FG%</p>
+      </div>
+
+      <div class="stat">
+        <h2 id="points">0</h2>
+        <p>POINTS</p>
+      </div>
+    </div>
+
+    <div class="court-container">
+      <svg viewBox="0 0 600 430"
+           xmlns="http://www.w3.org/2000/svg">
+
+        <!-- Court background -->
+        <rect width="600" height="430" fill="#C9935F"/>
+
+        <!-- Hardwood lines -->
+        <g stroke="#B8834C" stroke-width="2" opacity=".4">
+          <path d="M100 0 V430"/>
+          <path d="M200 0 V430"/>
+          <path d="M300 0 V430"/>
+          <path d="M400 0 V430"/>
+          <path d="M500 0 V430"/>
+        </g>
+
+        <!-- Basketball court markings -->
+        <g fill="none" stroke="white" stroke-width="3">
+          <rect x="15" y="0" width="570" height="415"/>
+          <rect x="205" y="0" width="190" height="195"/>
+
+          <path d="M205 195 A95 95 0 0 0 395 195"/>
+          <path d="M205 195 A95 95 0 0 1 395 195"
+                stroke-dasharray="8 8"/>
+
+          <path d="M70 0 V95"/>
+          <path d="M530 0 V95"/>
+          <path d="M70 95 A230 230 0 0 0 530 95"/>
+
+          <path d="M270 0 V40 H330 V0"/>
+          <circle cx="300" cy="55" r="12"/>
+        </g>
+
+        <!-- Shooting spots -->
+        <g id="spot0" class="spot"
+           onclick="selectSpot(0)">
+          <circle cx="70" cy="290" r="23"/>
+          <text x="70" y="296">1</text>
+        </g>
+
+        <g id="spot1" class="spot"
+           onclick="selectSpot(1)">
+          <circle cx="170" cy="345" r="23"/>
+          <text x="170" y="351">2</text>
+        </g>
+
+        <g id="spot2" class="spot"
+           onclick="selectSpot(2)">
+          <circle cx="300" cy="370" r="23"/>
+          <text x="300" y="376">3</text>
+        </g>
+
+        <g id="spot3" class="spot"
+           onclick="selectSpot(3)">
+          <circle cx="430" cy="345" r="23"/>
+          <text x="430" y="351">4</text>
+        </g>
+
+        <g id="spot4" class="spot"
+           onclick="selectSpot(4)">
+          <circle cx="530" cy="290" r="23"/>
+          <text x="530" y="296">5</text>
+        </g>
+
+        <!-- Shot result markers appear here -->
+        <g id="shotMarkers"></g>
+
+      </svg>
+    </div>
+
+    <p id="spotName">TOP OF THE KEY</p>
+    <p id="shotChance">40% SHOT CHANCE</p>
+
+    <div class="controls">
+      <button onclick="moveLeft()">B - LEFT</button>
+      <button class="shoot" onclick="shoot()">A - SHOOT</button>
+      <button onclick="moveRight()">C - RIGHT</button>
+    </div>
+
+    <p id="message">READY TO SHOOT?</p>
+
+    <p class="info">
+      Keyboard: B = Left | C = Right | A = Shoot
+      <br>
+      Later, your Modulino Buttons will control everything!
+    </p>
+
+    <button class="reset" onclick="resetGame()">
+      RESET GAME
+    </button>
+
+    <div class="shot-history">
+      <h3>SHOT HISTORY</h3>
+      <div id="history">No shots taken yet.</div>
+    </div>
+  </main>
+
+  <script>
+    // Five shooting locations
+    // These are game probabilities, not real NBA stats.
+
+    const spots = [
+      { name: "LEFT CORNER", x: 70, y: 290, chance: 35 },
+      { name: "LEFT WING", x: 170, y: 345, chance: 38 },
+      { name: "TOP OF THE KEY", x: 300, y: 370, chance: 40 },
+      { name: "RIGHT WING", x: 430, y: 345, chance: 38 },
+      { name: "RIGHT CORNER", x: 530, y: 290, chance: 35 }
+    ];
+
+    let currentSpot = 2;
+    let attempts = 0;
+    let makes = 0;
+    let points = 0;
+    let shotNumber = 0;
+    let history = [];
+
+    function selectSpot(index) {
+      currentSpot = index;
+
+      document.querySelectorAll(".spot").forEach(
+        element => element.classList.remove("selected")
+      );
+
+      document.getElementById("spot" + index)
+        .classList.add("selected");
+
+      const spot = spots[currentSpot];
+
+      document.getElementById("spotName")
+        .textContent = spot.name;
+
+      document.getElementById("shotChance")
+        .textContent = spot.chance + "% SHOT CHANCE";
+    }
+
+    function moveLeft() {
+      if (currentSpot > 0) {
+        selectSpot(currentSpot - 1);
+      }
+    }
+
+    function moveRight() {
+      if (currentSpot < spots.length - 1) {
+        selectSpot(currentSpot + 1);
+      }
+    }
+
+    function shoot() {
+      const spot = spots[currentSpot];
+
+      // Probability-based shooting
+      const made = Math.random() * 100 < spot.chance;
+
+      attempts++;
+      shotNumber++;
+
+      if (made) {
+        makes++;
+        points += 3;
+      }
+
+      addShotMarker(spot.x, spot.y, made);
+
+      const result = made ? "MAKE!" : "MISS!";
+
+      document.getElementById("message")
+        .textContent = result;
+
+      document.getElementById("message")
+        .style.color = made ? "#22C55E" : "#EF4444";
+
+      history.unshift(
+        "#" + shotNumber + " - " + spot.name +
+        " - " + (made ? "MADE" : "MISSED")
+      );
+
+      updateStats();
+      updateHistory();
+    }
+
+    function addShotMarker(x, y, made) {
+      const svgNS = "http://www.w3.org/2000/svg";
+
+      const marker = document.createElementNS(
+        svgNS, "circle"
+      );
+
+      // Offset markers slightly so multiple shots remain visible
+      const offsetX = (Math.random() - 0.5) * 30;
+      const offsetY = (Math.random() - 0.5) * 30;
+
+      marker.setAttribute("cx", x + offsetX);
+      marker.setAttribute("cy", y + offsetY);
+      marker.setAttribute("r", "7");
+      marker.setAttribute(
+        "fill", made ? "#22C55E" : "#EF4444"
+      );
+
+      marker.setAttribute("stroke", "white");
+      marker.setAttribute("stroke-width", "2");
+      marker.setAttribute("pointer-events", "none");
+
+      document.getElementById("shotMarkers")
+        .appendChild(marker);
+    }
+
+    function updateStats() {
+      const percentage = attempts === 0
+        ? 0
+        : Math.round((makes / attempts) * 100);
+
+      document.getElementById("attempts")
+        .textContent = attempts;
+
+      document.getElementById("makes")
+        .textContent = makes;
+
+      document.getElementById("percentage")
+        .textContent = percentage + "%";
+
+      document.getElementById("points")
+        .textContent = points;
+    }
+
+    function updateHistory() {
+      document.getElementById("history")
+        .innerHTML = history.slice(0, 10)
+        .map(item => "<div>" + item + "</div>")
+        .join("");
+    }
+
+    function resetGame() {
+      attempts = 0;
+      makes = 0;
+      points = 0;
+      shotNumber = 0;
+      history = [];
+
+      document.getElementById("shotMarkers")
+        .innerHTML = "";
+
+      document.getElementById("message")
+        .textContent = "READY TO SHOOT?";
+
+      document.getElementById("message")
+        .style.color = "#F58426";
+
+      updateStats();
+      updateHistory();
+      selectSpot(2);
+    }
+
+    // Keyboard controls matching the Modulino Buttons
+    document.addEventListener("keydown", function(event) {
+      if (event.repeat) return;
+
+      const key = event.key.toLowerCase();
+
+      if (key === "a") shoot();
+      if (key === "b") moveLeft();
+      if (key === "c") moveRight();
+    });
+
+    // Start at top of the key
+    selectSpot(2);
+  </script>
+</body>
+</html>
